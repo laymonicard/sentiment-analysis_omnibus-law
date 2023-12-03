@@ -1,0 +1,145 @@
+#Gather raw data as Json
+import stweet as st
+
+search_tweets_task = st.SearchTweetsTask(all_words = 'omnibus law')
+output_jl_tweets = st.JsonLineFileRawOutput('output_raw_search_tweets.jl')
+output_jl_users = st.JsonLineFileRawOutput ('output_raw_search_users.jl')
+
+output_print = st.PrintRawOutput ()
+
+st.TweetSearchRunner(search_tweets_task=search_tweets_task,tweet_raw_data_outputs=[output_print, output_jl_tweets], user_raw_data_outputs=[output_print, output_jl_users]).run()
+
+#Transform format to dataframe
+import pandas as pd
+
+tweet = pd.read_json('output_raw_search_tweets.jl', lines=True)
+
+tweet.head()
+  
+#Check sample
+tweet['raw_value'][1]
+
+#Normalizing nested JSON data
+tweet_rapi = pd.json_normalize(tweet['raw_value'])
+tweet_rapi['full_text'].head(10)
+
+#Check Data Types
+tweet_rapi.dtypes
+tweet_rapi['created_at'].head()
+
+tweet_rapi['created_at'] = pd.to_datetime(tweet_rapi['created_at'], format = '%a %b %d %H:%M:%S %z %Y') 
+#tweet_rapi['created_at'] = pd.to_datetime(tweet_rapi['created_at']) 
+
+tweet_rapi['created_at'].head()
+
+tweet_rapi['created_at'].describe()
+
+#save to csv
+tweet_rapi[['full_text', 'created_at']].head()
+tweet_rapi[['full_text', 'created_at']].to_csv('saved_clean_tweet.csv')
+pd.read_csv('saved_clean_tweet.csv', index_col = 0).head()
+#Scrapping specific period
+search_tweets_task = st.SearchTweetsTask(all_words='omnibus law until:2022-12-01 since:2020-03-01')
+
+output_jl_tweets = st.JsonLineFileRawOutput('output_raw_search_tweets_1month.jl')
+output_jl_users = st.JsonLineFileRawOutput('output_raw_search_users1month.jl')
+
+output_print = st.PrintRawOutput()
+
+st.TweetSearchRunner(search_tweets_task=search_tweets_task,tweet_raw_data_outputs=[output_print, output_jl_tweets], user_raw_data_outputs=[output_print, output_jl_users]).run()
+
+
+tweet_new = pd.read_json('output_raw_search_tweets_1month.jl', lines=True)
+
+tweet_clean = pd.json_normalize(tweet_new.raw_value)
+tweet_clean['created_at'] = pd.to_datetime(tweet_clean['created_at']) 
+
+tweet_clean = tweet_clean[['full_text', 'created_at']]
+
+tweet_clean.describe()
+
+
+search_tweets_task = st.SearchTweetsTask(all_words='omnibus law until:2023-04-06 since:2023-03-02')
+output_jl_tweets = st.JsonLineFileRawOutput('output_raw_search_tweets_feb.jl')
+output_jl_users = st.JsonLineFileRawOutput('output_raw_search_users_feb.jl')
+
+output_print = st.PrintRawOutput()
+
+st.TweetSearchRunner(search_tweets_task=search_tweets_task,tweet_raw_data_outputs=[output_print, output_jl_tweets], user_raw_data_outputs=[output_print, output_jl_users]).run()
+
+tweet_feb = pd.read_json('output_raw_search_tweets_feb.jl', lines=True)
+
+tweet_clean_feb = pd.json_normalize(tweet_feb.raw_value)
+tweet_clean_feb['created_at'] = pd.to_datetime(tweet_clean_feb['created_at']) 
+
+tweet_clean_feb = tweet_clean_feb[['full_text', 'created_at']]
+
+tweet_clean_feb.describe()
+
+tweet_join = pd.concat([tweet_clean_feb,tweet_clean])
+
+tweet_join.describe()
+
+#tweet_full = pd.concat([tweet_clean_feb,tweet_clean])
+
+#tweet_full.to_csv()
+
+tweet_join.head()
+tweet_join['created_at'].dt.day_name()
+
+tweet_join['Day'] = tweet_join['created_at'].dt.day_name()
+
+tweet_join.head()
+
+pd.crosstab(index = tweet_join['Day'] , columns = 'count').sort_values(by = 'count', ascending =False)
+
+pd.crosstab(index = tweet_join['Day'] , columns = 'count').sort_values(by = 'count', ascending =False)
+import matplotlib.pyplot as plt
+import numpy as np
+pd.crosstab(index = tweet_join['Day'] , columns = 'count').sort_values(by = 'count', ascending =False).plot(kind = 'bar')
+
+tweet_join['date'] = pd.to_datetime(tweet_join['created_at'].dt.date)
+
+pd.crosstab(index = tweet_join['date'], columns='count').plot()
+
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+#filter the df to one candidate, and create a list of responses from them
+text = tweet_join['full_text'].tolist() 
+
+# join the list and lowercase all the words
+text = ' '.join(text).lower()
+
+#create the wordcloud object
+wordcloud = WordCloud(collocations=True).generate(text)
+
+#plot the wordcloud object
+plt.imshow(wordcloud, interpolation='bilInear')
+plt.axis('off')
+plt.show()
+
+
+
+#filter the df to one candidate, and create a list of responses from them
+text = tweet_join['full_text'].tolist() 
+
+# join the list and lowercase all the words
+text = ' '.join(text).lower()
+
+#create the wordcloud object
+wordcloud = WordCloud(max_font_size=50, max_words=100, background_color="white").generate(text)
+
+#plot the wordcloud object
+plt.imshow(wordcloud, interpolation='bilInear')
+plt.axis('off')
+plt.show()
+
+
+
+
+
+
+
+
+
